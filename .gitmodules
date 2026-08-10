@@ -1,0 +1,3 @@
+[submodule "vis/third_party/HighFive"]
+	path = vis/third_party/HighFive
+	url = https://github.com/BlueBrain/HighFive.git
