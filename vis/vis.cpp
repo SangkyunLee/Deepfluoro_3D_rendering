@@ -24,14 +24,15 @@ vtkSmartPointer<vtkMatrix4x4> MultiplyMatrices(vtkSmartPointer<vtkMatrix4x4> m1,
     return result;
 }
 
-// Helper to load 1D std::vector data into a vtkMatrix4x4
-void VectorToVtkMatrix(const std::vector<double>& flat_data, vtkSmartPointer<vtkMatrix4x4> mat) {
-    for (int r = 0; r < 4; ++r) {
-        for (int c = 0; c < 4; ++c) {
-            mat->SetElement(r, c, flat_data[r * 4 + c]);
+// Updated helper to load 2D std::vector data into a vtkMatrix4x4
+void Vector2DToVtkMatrix(const std::vector<std::vector<double>>& matrix_2d, vtkSmartPointer<vtkMatrix4x4> mat) {
+    for (size_t r = 0; r < matrix_2d.size() && r < 4; ++r) {
+        for (size_t c = 0; c < matrix_2d[r].size() && c < 4; ++c) {
+            mat->SetElement(r, c, matrix_2d[r][c]);
         }
     }
 }
+
 
 int main() {
     std::string file_path = "/home/sang/projects/data/ipcai_2020_full_res_data/ipcai_2020_full_res_data.h5";
@@ -46,14 +47,14 @@ int main() {
         auto proj_params_g = f.getGroup("proj-params");
 
         // Read intrinsic and extrinsic matrices (flattened vectors)
-        std::vector<double> ext_data, int_data;
+        std::vector<std::vector<double>> ext_data, int_data;
         proj_params_g.getDataSet("extrinsic").read(ext_data);
         proj_params_g.getDataSet("intrinsic").read(int_data);
 
         auto extrinsic = vtkSmartPointer<vtkMatrix4x4>::New();
         auto intrinsic = vtkSmartPointer<vtkMatrix4x4>::New();
-        VectorToVtkMatrix(ext_data, extrinsic);
-        VectorToVtkMatrix(int_data, intrinsic);
+        Vector2DToVtkMatrix(ext_data, extrinsic);
+        Vector2DToVtkMatrix(int_data, intrinsic);
 
         double proj_num_cols = 0, proj_num_rows = 0, proj_col_spacing = 0, proj_row_spacing = 0;
         proj_params_g.getDataSet("num-cols").read(proj_num_cols);
@@ -73,7 +74,7 @@ int main() {
         auto proj_g = spec_g.getGroup(proj_path);
         auto gt_poses_g = proj_g.getGroup("gt-poses");
 
-        std::vector<double> p_data, lf_data, rf_data;
+        std::vector<std::vector<double>> p_data, lf_data, rf_data;
         gt_poses_g.getDataSet("cam-to-pelvis-vol").read(p_data);
         gt_poses_g.getDataSet("cam-to-left-femur-vol").read(lf_data);
         gt_poses_g.getDataSet("cam-to-right-femur-vol").read(rf_data);
@@ -81,9 +82,9 @@ int main() {
         auto cam_to_pelvis_vol = vtkSmartPointer<vtkMatrix4x4>::New();
         auto cam_to_left_femur_vol = vtkSmartPointer<vtkMatrix4x4>::New();
         auto cam_to_right_femur_vol = vtkSmartPointer<vtkMatrix4x4>::New();
-        VectorToVtkMatrix(p_data, cam_to_pelvis_vol);
-        VectorToVtkMatrix(lf_data, cam_to_left_femur_vol);
-        VectorToVtkMatrix(rf_data, cam_to_right_femur_vol);
+        Vector2DToVtkMatrix(p_data, cam_to_pelvis_vol);
+        Vector2DToVtkMatrix(lf_data, cam_to_left_femur_vol);
+        Vector2DToVtkMatrix(rf_data, cam_to_right_femur_vol);
 
         // Invert and multiply transforms
         auto pelvis_vol_to_cam_proj = MultiplyMatrices(extrinsic, InvertRigid(cam_to_pelvis_vol));
@@ -95,11 +96,12 @@ int main() {
         auto vol_seg_img_g = vol_seg_g.getGroup("image");
 
         // Read 3D volume pixel data
-        std::vector<int> vol_seg_pix; 
+        std::vector<std::vector<std::vector<int>>> vol_seg_pix; 
         vol_seg_img_g.getDataSet("pixels").read(vol_seg_pix);
 
         // Read metadata for transformation matrix
-        std::vector<double> vol_seg_spacing, vol_seg_dir_mat, vol_seg_origin;
+        std::vector<double> vol_seg_spacing, vol_seg_origin;
+        std::vector<std::vector<double>> vol_seg_dir_mat;
         vol_seg_img_g.getDataSet("spacing").read(vol_seg_spacing);
         vol_seg_img_g.getDataSet("dir-mat").read(vol_seg_dir_mat);
         vol_seg_img_g.getDataSet("origin").read(vol_seg_origin);
@@ -110,7 +112,7 @@ int main() {
 
         for (int r = 0; r < 3; ++r) {
             for (int c = 0; c < 3; ++c) {
-                double val = vol_seg_dir_mat[r * 3 + c] * vol_seg_spacing[c];
+                double val = vol_seg_dir_mat[r][c] * vol_seg_spacing[c];
                 vol_seg_idx_to_phys_pt->SetElement(r, c, val);
             }
             vol_seg_idx_to_phys_pt->SetElement(r, 3, vol_seg_origin[r]);
