@@ -1,21 +1,40 @@
 cmake_minimum_required(VERSION 3.12)
-project(RENDER_3D)
+project(Deepfluoro_3D_rendering)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14) # HighFive requires C++14 or newer
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find Dependencies
-find_package(VTK REQUIRED COMPONENTS CommonCore CommonMath CommonExecutionModel ImagingCore IOImage)
-# 2. Disable HighFive's built-in unit tests/examples to keep your build clean
-set(HIGHFIVE_UNIT_TESTS OFF CACHE INTERNAL "")
-set(HIGHFIVE_EXAMPLES OFF CACHE INTERNAL "")
+# 1. Set Build Type to Debug
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
+endif()
 
-# find_package(HighFive REQUIRED)
+# 2. Add HighFive Subdirectory
 add_subdirectory(third_party/HighFive)
 
+# 3. Find VTK and include RenderingAnnotation
+find_package(VTK REQUIRED COMPONENTS
+  CommonCore
+  CommonDataModel
+  InteractionStyle
+  RenderingCore
+  RenderingOpenGL2
+  RenderingVolume
+  RenderingVolumeOpenGL2
+  RenderingAnnotation      # <--- ADDED THIS MODULE FOR vtkCubeAxesActor
+)
+
+# 4. Define your executable
 add_executable(render3d vis.cpp)
 
-# Link Libraries
-target_link_libraries(render3d PRIVATE VTK::CommonCore VTK::CommonMath VTK::CommonExecutionModel VTK::ImagingCore VTK::IOImage HighFive)
+# 5. Link libraries
+target_link_libraries(render3d PRIVATE 
+  HighFive
+  ${VTK_LIBRARIES}
+)
 
-# VTK Auto-init configuration
-vtk_module_autoinit(TARGETS render3d MODULES VTK::CommonCore VTK::CommonMath VTK::CommonExecutionModel VTK::ImagingCore VTK::IOImage)
+# 6. Auto-configure flags and plumbing for VTK 
+vtk_module_autoinit(
+  TARGETS render3d
+  MODULES ${VTK_LIBRARIES}
+)
