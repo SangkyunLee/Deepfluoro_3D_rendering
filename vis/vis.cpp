@@ -26,6 +26,13 @@
 #include <vtkVolumeMapper.h>
 #include<vtkTextProperty.h>
 
+
+#include <vtkSphereSource.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkActor.h>
+#include <vtkProperty.h>
+
+
 using namespace std;
 
 // Helper to invert a rigid 4x4 matrix using VTK
@@ -141,7 +148,7 @@ vtkSmartPointer<vtkImageData> ImportVtkFromVector(
 
 
 
-vtkSmartPointer<vtkImageData> XformVolume(const vtkSmartPointer<vtkImageData> VolumeData, const vtkSmartPointer<vtkMatrix4x4> Xform){
+vtkSmartPointer<vtkImageData> XformVolume(vtkImageData* VolumeData, vtkMatrix4x4* Xform){
 
 
     vtkSmartPointer<vtkMatrixToHomogeneousTransform> transform = 
@@ -158,6 +165,25 @@ vtkSmartPointer<vtkImageData> XformVolume(const vtkSmartPointer<vtkImageData> Vo
     reslice->Update();
 
     return reslice->GetOutput();
+}
+
+
+void add_sphere(vtkRenderer* renderer, vector<double> pt, double r, double g, double b, double radius) {
+    auto sphere_src = vtkSmartPointer<vtkSphereSource>::New();
+    sphere_src->SetCenter(pt[0], pt[1], pt[2]);
+    sphere_src->SetThetaResolution(20);
+    sphere_src->SetPhiResolution(20);
+    sphere_src->SetRadius(radius);
+    sphere_src->Update();
+
+    auto mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputConnection(sphere_src->GetOutputPort());
+
+    auto actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+    actor->GetProperty()->SetColor(r, g, b);
+
+    renderer->AddViewProp(actor);
 }
 
 
@@ -208,12 +234,12 @@ void VolumeRendering(vtkVolumeMapper* volume_mapper, vtkRenderer* renderer, vtkR
 
     // 8. Set up Interactor
     
-    interactor->SetRenderWindow(render_window);
+    // interactor->SetRenderWindow(render_window);
 
     cube_axes_actor->VisibilityOn();
     
     // Complete the incomplete snippet by setting bounds and camera
-    renderer->ResetCamera();
+    // renderer->ResetCamera();
     cube_axes_actor->SetBounds(renderer->ComputeVisiblePropBounds());
     cube_axes_actor->SetCamera(renderer->GetActiveCamera());
 
@@ -234,8 +260,10 @@ void VolumeRendering(vtkVolumeMapper* volume_mapper, vtkRenderer* renderer, vtkR
 
     // cube_axes_actor->SetGridLineLocation(vtkCubeAxesActor->VTK_GRID_LINES_FURTHEST)
 
-    render_window->Render();
-    interactor->Start();
+    // interactor->SetRenderWindow(render_window);
+    // renderer->ResetCamera();
+    // render_window->Render();
+    // interactor->Start();
 }
 
 
@@ -356,6 +384,18 @@ int main() {
         vtkSmartPointer<vtkRenderWindow> render_window = vtkSmartPointer<vtkRenderWindow>::New();
         vtkSmartPointer<vtkRenderWindowInteractor> interactor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
         VolumeRendering(VolumeMapper, renderer, render_window, interactor);
+
+        for (string land_name: land_names){
+            vector<double> pt = lands_3d[land_name];
+            add_sphere(renderer, pt, 0.5, 0.0, 0.5, 5.0);
+        }
+        vector<double> pt{0.0, 0.0, 0.0};
+        add_sphere(renderer, pt, 0.0, 1.0, 0.0, 10);
+
+        interactor->SetRenderWindow(render_window);
+        renderer->ResetCamera();
+        render_window->Render();
+        interactor->Start();
 
         int a=1;
 

@@ -22,6 +22,7 @@ find_package(VTK REQUIRED COMPONENTS
   RenderingVolume
   RenderingVolumeOpenGL2
   RenderingAnnotation      # <--- ADDED THIS MODULE FOR vtkCubeAxesActor
+  FiltersSources
 )
 
 # 4. Define your executable
