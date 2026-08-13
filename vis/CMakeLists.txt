@@ -1,41 +1,39 @@
 cmake_minimum_required(VERSION 3.12)
-project(Deepfluoro_3D_rendering)
+project(QtVtkImageApp)
 
-set(CMAKE_CXX_STANDARD 14) # HighFive requires C++14 or newer
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
 
-# 1. Set Build Type to Debug
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build." FORCE)
-endif()
-
-# 2. Add HighFive Subdirectory
-add_subdirectory(third_party/HighFive)
-
-# 3. Find VTK and include RenderingAnnotation
-find_package(VTK REQUIRED COMPONENTS
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(VTK REQUIRED COMPONENTS 
   CommonCore
   CommonDataModel
+  ImagingCore
   InteractionStyle
   RenderingCore
   RenderingOpenGL2
-  RenderingVolume
-  RenderingVolumeOpenGL2
-  RenderingAnnotation      # <--- ADDED THIS MODULE FOR vtkCubeAxesActor
-  FiltersSources
+  GUISupportQt
+)
+set(PROJECT_SOURCES
+    qtmain.cpp    
+    include/qtmain.h      # <-- Explicitly include here
+)
+add_executable(QtVtkImageApp ${PROJECT_SOURCES})
+target_link_libraries(QtVtkImageApp PRIVATE 
+  Qt6::Widgets
+  VTK::CommonCore
+  VTK::CommonDataModel
+  VTK::ImagingCore
+  VTK::InteractionStyle
+  VTK::RenderingCore
+  VTK::RenderingOpenGL2
+  VTK::GUISupportQt
 )
 
-# 4. Define your executable
-add_executable(render3d vis.cpp)
-
-# 5. Link libraries
-target_link_libraries(render3d PRIVATE 
-  HighFive
-  ${VTK_LIBRARIES}
-)
-
-# 6. Auto-configure flags and plumbing for VTK 
+# Necessary for VTK auto-initialization
 vtk_module_autoinit(
-  TARGETS render3d
-  MODULES ${VTK_LIBRARIES}
+  TARGETS QtVtkImageApp
+  MODULES VTK::RenderingOpenGL2 VTK::InteractionStyle
 )
